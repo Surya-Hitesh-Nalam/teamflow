@@ -42,5 +42,6 @@ router.post('/login', [
 
 router.post('/logout', authenticate, logout);
 router.get('/me', authenticate, getMe);
+router.post('/verify-otp', verifyOTP);
 
 module.exports = router;

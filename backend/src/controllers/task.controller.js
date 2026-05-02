@@ -13,13 +13,13 @@ const createTask = async (req, res) => {
         title,
         description: description || null,
         projectId,
-        assignedTo: assignedTo || null,
+        assignedTo: assignedTo ? parseInt(assignedTo) : null,
         createdBy,
         priority: priority || 'MEDIUM',
         dueDate: dueDate ? new Date(dueDate) : null
       },
       include: {
-        assignee: { select: { id: true, name: true } },
+        assignee: { select: { id: true, name: true, email: true } },
         creator: { select: { id: true, name: true } }
       }
     });
@@ -46,7 +46,7 @@ const getProjectTasks = async (req, res) => {
     const tasks = await prisma.task.findMany({
       where: { projectId },
       include: {
-        assignee: { select: { id: true, name: true } },
+        assignee: { select: { id: true, name: true, email: true } },
         creator: { select: { id: true, name: true } },
         _count: { select: { comments: true } }
       },
@@ -73,7 +73,7 @@ const getTaskById = async (req, res) => {
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       include: {
-        assignee: { select: { id: true, name: true } },
+        assignee: { select: { id: true, name: true, email: true } },
         creator: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } }
       }
@@ -112,14 +112,14 @@ const updateTask = async (req, res) => {
     if (description !== undefined) updateData.description = description;
     if (status !== undefined) updateData.status = status;
     if (priority !== undefined) updateData.priority = priority;
-    if (assignedTo !== undefined) updateData.assignedTo = assignedTo;
+    if (assignedTo !== undefined) updateData.assignedTo = assignedTo ? parseInt(assignedTo) : null;
     if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
 
     const task = await prisma.task.update({
       where: { id: taskId },
       data: updateData,
       include: {
-        assignee: { select: { id: true, name: true } },
+        assignee: { select: { id: true, name: true, email: true } },
         creator: { select: { id: true, name: true } }
       }
     });
