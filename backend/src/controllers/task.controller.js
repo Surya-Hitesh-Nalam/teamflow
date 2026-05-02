@@ -59,6 +59,36 @@ const getProjectTasks = async (req, res) => {
   }
 };
 
+const getTaskById = async (req, res) => {
+  try {
+    const taskId = parseInt(req.params.id);
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        assignee: { select: { id: true, name: true } },
+        creator: { select: { id: true, name: true } },
+        project: { select: { id: true, name: true } }
+      }
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const now = new Date();
+    const taskWithOverdue = {
+      ...task,
+      isOverdue: task.dueDate && new Date(task.dueDate) < now && task.status !== 'DONE'
+    };
+
+    res.json({ task: taskWithOverdue });
+  } catch (err) {
+    console.error('Get task error:', err);
+    res.status(500).json({ message: 'Failed to fetch task' });
+  }
+};
+
 const updateTask = async (req, res) => {
   try {
     const taskId = parseInt(req.params.id);
@@ -125,4 +155,4 @@ const deleteTask = async (req, res) => {
   }
 };
 
-module.exports = { createTask, getProjectTasks, updateTask, deleteTask };
+module.exports = { createTask, getProjectTasks, getTaskById, updateTask, deleteTask };
