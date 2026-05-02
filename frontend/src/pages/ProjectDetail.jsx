@@ -19,7 +19,8 @@ export default function ProjectDetail() {
     title: '',
     description: '',
     priority: 'MEDIUM',
-    assignedTo: ''
+    assignedTo: '',
+    dueDate: ''
   });
 
   // Member management state
@@ -34,12 +35,12 @@ export default function ProjectDetail() {
     try {
       setLoading(true);
       const [projectRes, tasksRes, activityRes] = await Promise.all([
-        API.get(`/api/projects/${id}`),
-        API.get(`/api/projects/${id}/tasks`),
-        API.get(`/api/projects/${id}/activity`)
+        API.get(`/projects/${id}`),
+        API.get(`/projects/${id}/tasks`),
+        API.get(`/projects/${id}/activity`)
       ]);
-      setProject(projectRes.data);
-      setTasks(tasksRes.data);
+      setProject(projectRes.data.project);
+      setTasks(tasksRes.data.tasks);
       setActivities(activityRes.data.activities);
     } catch (err) {
       setError('Failed to load project details');
@@ -52,10 +53,10 @@ export default function ProjectDetail() {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     try {
-      const res = await API.post(`/api/projects/${id}/tasks`, newTask);
-      setTasks([...tasks, res.data]);
+      const res = await API.post(`/projects/${id}/tasks`, newTask);
+      setTasks([...tasks, res.data.task]);
       setShowTaskModal(false);
-      setNewTask({ title: '', description: '', priority: 'MEDIUM', assignedTo: '' });
+      setNewTask({ title: '', description: '', priority: 'MEDIUM', assignedTo: '', dueDate: '' });
       fetchProjectData(); // Refresh activity log
     } catch (err) {
       alert(err.response?.data?.message || 'Error creating task');
@@ -64,7 +65,7 @@ export default function ProjectDetail() {
 
   const handleUpdateTaskStatus = async (taskId, newStatus) => {
     try {
-      await API.patch(`/api/tasks/${taskId}`, { status: newStatus });
+      await API.patch(`/tasks/${taskId}`, { status: newStatus });
       setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
       fetchProjectData(); // Refresh activity log
     } catch (err) {
@@ -75,7 +76,7 @@ export default function ProjectDetail() {
   const handleAddMember = async (e) => {
     e.preventDefault();
     try {
-      await API.post(`/api/projects/${id}/members`, { email: memberEmail, role: memberRole });
+      await API.post(`/projects/${id}/members`, { email: memberEmail, role: memberRole });
       setMemberEmail('');
       alert('Member added successfully');
       fetchProjectData();
@@ -150,7 +151,7 @@ export default function ProjectDetail() {
                         <p className="text-sm text-gray-500 line-clamp-2">{task.description}</p>
                         <div className="mt-4 flex items-center justify-between text-xs text-gray-400">
                           <span className="flex items-center gap-1">
-                             👤 {task.assignedUser?.name || 'Unassigned'}
+                             👤 {task.assignee?.name || 'Unassigned'}
                           </span>
                           {task.isOverdue && (
                             <span className="text-red-500 font-medium">⚠️ Overdue</span>
@@ -282,6 +283,28 @@ export default function ProjectDetail() {
                   <option value="HIGH">High</option>
                   <option value="URGENT">Urgent</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
+                <select 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={newTask.assignedTo}
+                  onChange={e => setNewTask({...newTask, assignedTo: e.target.value})}
+                >
+                  <option value="">Unassigned</option>
+                  {project.members?.map(m => (
+                    <option key={m.userId} value={m.userId}>{m.user.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                <input 
+                  type="date" 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={newTask.dueDate}
+                  onChange={e => setNewTask({...newTask, dueDate: e.target.value})}
+                />
               </div>
               <div className="flex gap-3 pt-4">
                 <button 

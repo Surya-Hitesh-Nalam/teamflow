@@ -25,9 +25,9 @@ export default function VerifyOTP() {
     setError('');
 
     try {
-      await API.post('/api/auth/verify-otp', { email, otp });
-      // After verification, check auth to update global state
-      await checkAuth(); 
+      await API.post('/auth/verify-otp', { email, otp });
+      // Trigger background check but navigate immediately
+      checkAuth(); 
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Verification failed');

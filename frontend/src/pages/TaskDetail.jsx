@@ -23,8 +23,8 @@ export default function TaskDetail() {
     try {
       setLoading(true);
       const [taskRes, commentsRes] = await Promise.all([
-        API.get(`/api/tasks/${id}`),
-        API.get(`/api/tasks/${id}/comments`)
+        API.get(`/tasks/${id}`),
+        API.get(`/tasks/${id}/comments`)
       ]);
       setTask(taskRes.data.task);
       setComments(commentsRes.data.comments);
@@ -39,7 +39,7 @@ export default function TaskDetail() {
   const handleUpdateStatus = async (newStatus) => {
     try {
       setUpdating(true);
-      await API.patch(`/api/tasks/${id}`, { status: newStatus });
+      await API.patch(`/tasks/${id}`, { status: newStatus });
       setTask({ ...task, status: newStatus });
     } catch (err) {
       alert('Failed to update status');
@@ -51,7 +51,7 @@ export default function TaskDetail() {
   const handleUpdatePriority = async (newPriority) => {
     try {
       setUpdating(true);
-      await API.patch(`/api/tasks/${id}`, { priority: newPriority });
+      await API.patch(`/tasks/${id}`, { priority: newPriority });
       setTask({ ...task, priority: newPriority });
     } catch (err) {
       alert('Failed to update priority');
@@ -65,7 +65,7 @@ export default function TaskDetail() {
     if (!newComment.trim()) return;
 
     try {
-      const res = await API.post(`/api/tasks/${id}/comments`, { content: newComment });
+      const res = await API.post(`/tasks/${id}/comments`, { content: newComment });
       setComments([res.data.comment, ...comments]);
       setNewComment('');
     } catch (err) {
@@ -77,7 +77,7 @@ export default function TaskDetail() {
     if (!window.confirm('Are you sure you want to delete this task?')) return;
 
     try {
-      await API.delete(`/api/tasks/${id}`);
+      await API.delete(`/tasks/${id}`);
       navigate(`/projects/${task.projectId}`);
     } catch (err) {
       alert('Failed to delete task');

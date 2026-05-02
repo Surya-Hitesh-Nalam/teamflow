@@ -17,7 +17,7 @@ export default function Signup() {
     setError('');
 
     try {
-      await API.post('/api/auth/signup', { name, email, password, role });
+      await API.post('/auth/signup', { name, email, password, role });
       // Redirect to OTP verification
       navigate('/verify-otp', { state: { email } });
     } catch (err) {
