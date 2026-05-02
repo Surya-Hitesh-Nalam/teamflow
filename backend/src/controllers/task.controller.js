@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const logActivity = require('../utils/activityLogger');
+const { sendTaskAssignment } = require('../utils/emailService');
 
 const createTask = async (req, res) => {
   try {
@@ -24,6 +25,12 @@ const createTask = async (req, res) => {
     });
 
     await logActivity(projectId, createdBy, 'created task', 'task', task.id);
+
+    // Send email notification if assigned
+    if (task.assignee) {
+      const project = await prisma.project.findUnique({ where: { id: projectId } });
+      await sendTaskAssignment(task.assignee.email, task.title, project.name);
+    }
 
     res.status(201).json({ task });
   } catch (err) {
@@ -126,6 +133,12 @@ const updateTask = async (req, res) => {
         'task',
         taskId
       );
+    }
+
+    // Send email notification if assignee changed
+    if (assignedTo && assignedTo !== existing.assignedTo && task.assignee) {
+      const project = await prisma.project.findUnique({ where: { id: existing.projectId } });
+      await sendTaskAssignment(task.assignee.email, task.title, project.name);
     }
 
     res.json({ task });

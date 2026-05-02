@@ -7,139 +7,86 @@ async function main() {
   console.log('Seeding database...');
 
   // clean up existing data
-  await prisma.activityLog.deleteMany();
   await prisma.comment.deleteMany();
   await prisma.task.deleteMany();
+  await prisma.activityLog.deleteMany();
   await prisma.projectMember.deleteMany();
   await prisma.project.deleteMany();
-  await prisma.blacklistedToken.deleteMany();
   await prisma.user.deleteMany();
 
-  const passwordHash = await bcrypt.hash('password123', 10);
+  const passwordHash = await bcrypt.hash('admin123', 10);
+  const memberHash = await bcrypt.hash('member123', 10);
 
-  // create admin user
+  // 1. Create Admin
   const admin = await prisma.user.create({
     data: {
-      name: 'Surya Kumar',
+      name: 'Super Admin',
       email: 'admin@teamflow.com',
       passwordHash,
-      role: 'ADMIN'
+      role: 'ADMIN',
+      isVerified: true
     }
   });
 
-  // create regular member
+  // 2. Create Sample Member
   const member = await prisma.user.create({
     data: {
-      name: 'Priya Sharma',
-      email: 'member@teamflow.com',
-      passwordHash,
-      role: 'MEMBER'
+      name: 'John Doe',
+      email: 'john@example.com',
+      passwordHash: memberHash,
+      role: 'MEMBER',
+      isVerified: true
     }
   });
 
-  console.log('Created users:', admin.email, member.email);
-
-  // create a project
+  // 3. Create Sample Project
   const project = await prisma.project.create({
     data: {
-      name: 'Website Redesign',
-      description: 'Redesigning the company website with a fresh look and better UX',
-      ownerId: admin.id,
-      members: {
-        create: [
-          { userId: admin.id },
-          { userId: member.id }
-        ]
-      }
+      name: 'Enterprise App 2024',
+      description: 'Building the next generation of team collaboration tools.',
+      ownerId: admin.id
     }
   });
 
-  console.log('Created project:', project.name);
-
-  // create some tasks with different statuses and priorities
-  const tasks = await Promise.all([
-    prisma.task.create({
-      data: {
-        title: 'Design new homepage layout',
-        description: 'Create wireframes and mockups for the new homepage',
-        projectId: project.id,
-        assignedTo: member.id,
-        createdBy: admin.id,
-        status: 'IN_PROGRESS',
-        priority: 'HIGH',
-        dueDate: new Date('2026-05-10')
-      }
-    }),
-    prisma.task.create({
-      data: {
-        title: 'Fix login bug on mobile',
-        description: 'Users are reporting that the login form does not work on Safari mobile',
-        projectId: project.id,
-        assignedTo: member.id,
-        createdBy: admin.id,
-        status: 'TODO',
-        priority: 'URGENT',
-        dueDate: new Date('2026-05-03')
-      }
-    }),
-    prisma.task.create({
-      data: {
-        title: 'Update footer links',
-        description: 'Add new social media links and update the privacy policy URL',
-        projectId: project.id,
-        assignedTo: admin.id,
-        createdBy: admin.id,
-        status: 'DONE',
-        priority: 'LOW'
-      }
-    })
-  ]);
-
-  console.log(`Created ${tasks.length} tasks`);
-
-  // add a couple activity logs so the dashboard isn't empty
-  await prisma.activityLog.createMany({
-    data: [
-      {
-        projectId: project.id,
-        userId: admin.id,
-        action: 'created project',
-        entityType: 'project',
-        entityId: project.id
-      },
-      {
-        projectId: project.id,
-        userId: admin.id,
-        action: 'created task',
-        entityType: 'task',
-        entityId: tasks[0].id
-      },
-      {
-        projectId: project.id,
-        userId: member.id,
-        action: 'updated status to IN_PROGRESS',
-        entityType: 'task',
-        entityId: tasks[0].id
-      }
-    ]
-  });
-
-  // add a sample comment
-  await prisma.comment.create({
+  // 4. Add Member to Project
+  await prisma.projectMember.create({
     data: {
-      taskId: tasks[0].id,
-      userId: member.id,
-      content: 'Started working on this. Will share the mockups by tomorrow.'
+      projectId: project.id,
+      userId: member.id
     }
   });
 
-  console.log('Seed completed!');
-  console.log('Admin login: admin@teamflow.com / password123');
-  console.log('Member login: member@teamflow.com / password123');
+  // 5. Create Sample Tasks
+  await prisma.task.create({
+    data: {
+      title: 'Design System Architecture',
+      description: 'Define the core components and layout for the new enterprise application.',
+      status: 'IN_PROGRESS',
+      priority: 'HIGH',
+      projectId: project.id,
+      assignedTo: admin.id,
+      createdBy: admin.id
+    }
+  });
+
+  await prisma.task.create({
+    data: {
+      title: 'Setup CI/CD Pipeline',
+      description: 'Automate deployment to staging and production environments.',
+      status: 'TODO',
+      priority: 'URGENT',
+      projectId: project.id,
+      assignedTo: member.id,
+      createdBy: admin.id,
+      dueDate: new Date(Date.now() - 86400000) // Yesterday (Overdue)
+    }
+  });
+
+  console.log('Seeding finished.');
 }
 
 main()
-  .catch(e => {
+  .catch((e) => {
     console.error(e);
     process.exit(1);
   })

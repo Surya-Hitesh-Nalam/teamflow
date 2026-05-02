@@ -1,99 +1,121 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import API from '../api/axios';
 
 export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [role, setRole] = useState('MEMBER');
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError('');
 
     try {
-      await signup(name, email, password);
-      navigate('/dashboard');
+      await API.post('/api/auth/signup', { name, email, password, role });
+      // Redirect to OTP verification
+      navigate('/verify-otp', { state: { email } });
     } catch (err) {
-      // show first validation error if there are multiple
-      const msg = err.response?.data?.errors
-        ? err.response.data.errors[0].msg
-        : err.response?.data?.message || 'Signup failed';
-      setError(msg);
+      setError(err.response?.data?.message || 'Signup failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-lg shadow-sm ring-1 ring-gray-200 p-8 w-full max-w-md">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Create an account</h1>
-        <p className="text-gray-500 mb-6 text-sm">Get started with TeamFlow</p>
+    <div className="min-h-[80vh] flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
+          <p className="text-gray-500 mt-2">Join TeamFlow to manage your projects</p>
+        </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md mb-4">
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input
-              type="text"
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+            <input 
+              type="text" 
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              placeholder="John Doe"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-              placeholder="John Doe"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+            <input 
+              type="email" 
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              placeholder="john@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-              placeholder="you@example.com"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input
-              type="password"
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+            <input 
+              type="password" 
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-              placeholder="At least 6 characters"
               required
-              minLength={6}
             />
           </div>
 
-          <button
-            type="submit"
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Account Type</label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setRole('MEMBER')}
+                className={`py-3 rounded-xl border font-medium transition ${
+                  role === 'MEMBER' ? 'bg-blue-50 border-blue-600 text-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Member
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('ADMIN')}
+                className={`py-3 rounded-xl border font-medium transition ${
+                  role === 'ADMIN' ? 'bg-blue-50 border-blue-600 text-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Admin
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2 italic">
+              * Admins can create projects and manage members.
+            </p>
+          </div>
+
+          <button 
+            type="submit" 
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition transform active:scale-[0.98] shadow-lg shadow-blue-200 disabled:opacity-50"
             disabled={loading}
-            className="w-full bg-slate-800 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-slate-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Creating account...' : 'Create account'}
+            {loading ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-500">
-          Already have an account?{' '}
-          <Link to="/login" className="text-slate-700 font-medium hover:underline">
-            Sign in
-          </Link>
+        <p className="text-center mt-8 text-gray-600">
+          Already have an account? <Link to="/login" className="text-blue-600 font-bold hover:underline">Log in</Link>
         </p>
       </div>
     </div>

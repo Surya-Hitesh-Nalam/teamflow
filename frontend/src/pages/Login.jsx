@@ -5,78 +5,101 @@ import { useAuth } from '../context/AuthContext';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+    if (e) e.preventDefault();
     setLoading(true);
+    setError('');
 
     try {
       await login(email, password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      if (err.response?.data?.unverified) {
+        navigate('/verify-otp', { state: { email } });
+      } else {
+        setError(err.response?.data?.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleQuickLogin = () => {
+    setEmail('admin@teamflow.com');
+    setPassword('admin123');
+    // Note: In a real app we'd trigger the login immediately or wait for the user to click.
+    // Let's make it feel natural:
+    setError('Demo credentials loaded. Click Login!');
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-lg shadow-sm ring-1 ring-gray-200 p-8 w-full max-w-md">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Welcome back</h1>
-        <p className="text-gray-500 mb-6 text-sm">Sign in to your TeamFlow account</p>
+    <div className="min-h-[80vh] flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 font-display">Welcome Back</h1>
+          <p className="text-gray-500 mt-2 text-sm">Sign in to manage your team flow</p>
+        </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md mb-4">
+          <div className={`mb-6 p-4 border-l-4 text-sm ${error.includes('loaded') ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-red-50 border-red-500 text-red-700'}`}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+            <input 
+              type="email" 
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              placeholder="admin@teamflow.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-              placeholder="you@example.com"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input
-              type="password"
+            <div className="flex justify-between mb-1.5">
+              <label className="block text-sm font-semibold text-gray-700">Password</label>
+              <a href="#" className="text-xs text-blue-600 hover:underline">Forgot password?</a>
+            </div>
+            <input 
+              type="password" 
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-              placeholder="••••••••"
               required
             />
           </div>
 
-          <button
-            type="submit"
+          <button 
+            type="submit" 
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition transform active:scale-[0.98] shadow-lg shadow-blue-200 disabled:opacity-50"
             disabled={loading}
-            className="w-full bg-slate-800 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-slate-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Logging in...' : 'Sign In'}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-500">
-          Don't have an account?{' '}
-          <Link to="/signup" className="text-slate-700 font-medium hover:underline">
-            Sign up
-          </Link>
-        </p>
+        <div className="mt-8 pt-6 border-t border-gray-50 text-center">
+          <button 
+            onClick={handleQuickLogin}
+            className="w-full border-2 border-gray-100 py-3 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:border-gray-200 transition flex items-center justify-center gap-2"
+          >
+            🚀 Try Demo Admin Account
+          </button>
+          
+          <p className="mt-6 text-gray-600">
+            Don't have an account? <Link to="/signup" className="text-blue-600 font-bold hover:underline">Sign up</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

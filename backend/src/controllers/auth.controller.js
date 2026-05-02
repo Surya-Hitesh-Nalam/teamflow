@@ -1,21 +1,61 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
+const { sendOTP } = require('../utils/emailService');
+
+// helper to generate 6-digit OTP
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const signup = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
-    // check if user already exists
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
     const user = await prisma.user.create({
-      data: { name, email, passwordHash }
+      data: { 
+        name, 
+        email, 
+        passwordHash, 
+        role: role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
+        otp,
+        otpExpires,
+        isVerified: false
+      }
+    });
+
+    await sendOTP(email, otp);
+
+    res.status(201).json({
+      message: 'Account created. Please verify your email with the OTP sent.',
+      userId: user.id
+    });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+};
+
+const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user || user.otp !== otp || new Date() > user.otpExpires) {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isVerified: true, otp: null, otpExpires: null }
     });
 
     const token = jwt.sign(
@@ -24,7 +64,6 @@ const signup = async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    // httpOnly so JS can't touch it — this is the whole point of cookie auth
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -32,12 +71,12 @@ const signup = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    res.status(201).json({
-      message: 'Account created',
+    res.json({
+      message: 'Email verified and logged in',
       user: { id: user.id, name: user.name, email: user.email, role: user.role }
     });
   } catch (err) {
-    console.error('Signup error:', err);
+    console.error('OTP verification error:', err);
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
@@ -49,6 +88,18 @@ const login = async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    if (!user.isVerified) {
+      // Resend OTP if not verified
+      const otp = generateOTP();
+      const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { otp, otpExpires }
+      });
+      await sendOTP(email, otp);
+      return res.status(403).json({ message: 'Account not verified. New OTP sent to your email.', unverified: true });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
@@ -82,26 +133,18 @@ const login = async (req, res) => {
 const logout = async (req, res) => {
   try {
     const token = req.cookies.token;
-
     if (token) {
-      // blacklisting token so it can't be reused even before expiry
       await prisma.blacklistedToken.create({
-        data: {
-          token,
-          userId: req.user.userId
-        }
+        data: { token, userId: req.user.userId }
       });
     }
-
     res.clearCookie('token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     });
-
     res.json({ message: 'Logged out' });
   } catch (err) {
-    console.error('Logout error:', err);
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
@@ -112,16 +155,10 @@ const getMe = async (req, res) => {
       where: { id: req.user.userId },
       select: { id: true, name: true, email: true, role: true, createdAt: true }
     });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
     res.json({ user });
   } catch (err) {
-    console.error('GetMe error:', err);
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
 
-module.exports = { signup, login, logout, getMe };
+module.exports = { signup, verifyOTP, login, logout, getMe };
