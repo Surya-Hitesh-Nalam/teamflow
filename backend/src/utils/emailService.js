@@ -3,9 +3,7 @@ const nodemailer = require('nodemailer');
 // For local testing, we'll log to console if SMTP isn't configured
 // In production, these would be in your .env
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-  port: process.env.EMAIL_PORT || 587,
-  secure: false, 
+  service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS,
