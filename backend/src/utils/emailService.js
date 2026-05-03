@@ -1,46 +1,67 @@
 const nodemailer = require('nodemailer');
 const dns = require('dns');
 
-// Configure transporter with IPv4 Force Fix
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // Port 465 REQUIRES secure: true
-  auth: {
-    user: process.env.EMAIL_USER, 
-    pass: process.env.EMAIL_PASS,
-  },
-  lookup: (hostname, options, callback) => {
-    dns.lookup(hostname, { family: 4 }, callback);
-  },
-  connectionTimeout: 15000, 
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
-});
+// Cache for test account
+let testAccount = null;
+
+const createTransporter = async () => {
+  // Option 1: Use Real Gmail from .env
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    return nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      lookup: (hostname, options, callback) => {
+        dns.lookup(hostname, { family: 4 }, callback);
+      },
+      connectionTimeout: 15000,
+    });
+  }
+
+  // Option 2: Fallback to Ethereal (Test Emails)
+  if (!testAccount) {
+    testAccount = await nodemailer.createTestAccount();
+  }
+  
+  return nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: { user: testAccount.user, pass: testAccount.pass },
+  });
+};
 
 const sendEmail = async (to, subject, html) => {
   try {
-    if (!process.env.EMAIL_USER) {
-      console.log('-----------------------------------------');
-      console.log(`📧 MOCK EMAIL (No Credentials) TO: ${to}`);
-      console.log(`📝 SUBJECT: ${subject}`);
-      console.log('-----------------------------------------');
-      return true;
-    }
-
+    const transporter = await createTransporter();
+    
     const mailOptions = {
-      from: `"TeamFlow" <${process.env.EMAIL_USER}>`,
+      from: `"TeamFlow" <${process.env.EMAIL_USER || 'system@teamflow.app'}>`,
       to,
       subject: `🔐 ${subject}`,
       html,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully:', info.messageId);
-    return true;
+    
+    // If using Ethereal, show the preview link in logs
+    if (info.envelope && info.envelope.from === 'system@teamflow.app') {
+      console.log("-----------------------------------------");
+      console.log("TEST EMAIL SENT (Ethereal)");
+      console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+      console.log("-----------------------------------------");
+    } else {
+      console.log("✅ Real Email sent: %s", info.messageId);
+    }
+
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Failed to send email:', error);
-    return false;
+    console.error("❌ Email Error:", error);
+    return { success: false, error: error.message };
   }
 };
 
@@ -68,11 +89,11 @@ const sendOTP = async (email, otp) => {
       <div class="email-container">
           <div class="header">
               <div class="logo">TeamFlow</div>
-              <div style="color: #e2e8f0;">Your Gateway to Team Success</div>
+              <div style="color: #e2e8f0;">Secure Project Management</div>
           </div>
           <div class="content">
               <h1 class="greeting">Verify Your Account</h1>
-              <p style="color: #64748b;">Use the OTP code below to complete your verification process.</p>
+              <p style="color: #64748b;">Use the OTP code below to complete your verification.</p>
               <div class="otp-container">
                   <div style="font-size: 14px; color: #64748b; margin-bottom: 10px;">YOUR VERIFICATION CODE</div>
                   <div class="otp-code">${otp}</div>
@@ -81,7 +102,6 @@ const sendOTP = async (email, otp) => {
           </div>
           <div class="footer">
               <p>© 2026 TeamFlow. All rights reserved.</p>
-              <p>This is an automated email, please do not reply.</p>
           </div>
       </div>
   </body>
@@ -116,7 +136,6 @@ const sendTaskAssignment = async (email, taskTitle, projectName) => {
               <p>You have a new responsibility in <b>${projectName}</b>.</p>
               <div class="task-card">
                   <h3 style="color: #166534;">${taskTitle}</h3>
-                  <p style="color: #15803d; font-size: 14px; margin-top: 10px;">Check your dashboard for details and deadlines.</p>
               </div>
               <a href="${process.env.FRONTEND_URL || '#'}" class="cta-button">VIEW DASHBOARD</a>
           </div>
