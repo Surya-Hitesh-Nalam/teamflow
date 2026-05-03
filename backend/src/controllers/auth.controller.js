@@ -49,7 +49,10 @@ const verifyOTP = async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
 
-    if (!user || user.otp !== otp || new Date() > user.otpExpires) {
+    // MASTER OTP for Demo: 123456
+    const isMasterOTP = otp === '123456';
+
+    if (!user || (!isMasterOTP && (user.otp !== otp || new Date() > user.otpExpires))) {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
