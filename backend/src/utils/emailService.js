@@ -3,11 +3,16 @@ const nodemailer = require('nodemailer');
 // For local testing, we'll log to console if SMTP isn't configured
 // In production, these would be in your .env
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Use STARTTLS
   auth: {
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS,
   },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
 
 const sendEmail = async (to, subject, text, html) => {
