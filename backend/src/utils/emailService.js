@@ -4,7 +4,7 @@ const dns = require('dns');
 // Configure transporter with IPv4 Force Fix
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,
+  port: 465,
   secure: false, // Use STARTTLS
   auth: {
     user: process.env.EMAIL_USER, 
