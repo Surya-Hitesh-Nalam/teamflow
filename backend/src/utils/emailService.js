@@ -5,7 +5,7 @@ const dns = require('dns');
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
-  secure: false, // Use STARTTLS
+  secure: true, // Port 465 REQUIRES secure: true
   auth: {
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS,
