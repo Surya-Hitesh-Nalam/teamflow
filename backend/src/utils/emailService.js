@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
 
-// For local testing, we'll log to console if SMTP isn't configured
-// In production, these would be in your .env
+// Configure transporter with IPv4 Force Fix
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
@@ -10,70 +10,122 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS,
   },
-  family: 4, // Force IPv4 to avoid ENETUNREACH on Render
-  connectionTimeout: 10000, 
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+  lookup: (hostname, options, callback) => {
+    dns.lookup(hostname, { family: 4 }, callback);
+  },
+  connectionTimeout: 15000, 
+  greetingTimeout: 15000,
+  socketTimeout: 15000,
 });
 
-const sendEmail = async (to, subject, text, html) => {
+const sendEmail = async (to, subject, html) => {
   try {
-    // If no credentials, just log to console (Smart Debug Mode)
     if (!process.env.EMAIL_USER) {
       console.log('-----------------------------------------');
-      console.log(`📧 MOCK EMAIL SENT TO: ${to}`);
+      console.log(`📧 MOCK EMAIL (No Credentials) TO: ${to}`);
       console.log(`📝 SUBJECT: ${subject}`);
-      console.log(`📄 CONTENT: ${text}`);
       console.log('-----------------------------------------');
       return true;
     }
 
-    const info = await transporter.sendMail({
-      from: '"TeamFlow App" <noreply@teamflow.com>',
+    const mailOptions = {
+      from: `"TeamFlow" <${process.env.EMAIL_USER}>`,
       to,
-      subject,
-      text,
+      subject: `🔐 ${subject}`,
       html,
-    });
+    };
 
-    console.log("Message sent: %s", info.messageId);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully:', info.messageId);
     return true;
   } catch (error) {
-    console.error("Email error:", error);
+    console.error('❌ Failed to send email:', error);
     return false;
   }
 };
 
 const sendOTP = async (email, otp) => {
-  const subject = "TeamFlow - Your Verification Code";
-  const text = `Your verification code is: ${otp}. It will expire in 10 minutes.`;
-  const html = `
-    <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-      <h2 style="color: #2563eb;">Verify Your Account</h2>
-      <p>Welcome to TeamFlow! Use the code below to complete your registration:</p>
-      <div style="font-size: 32px; font-weight: bold; padding: 20px; background: #f3f4f6; text-align: center; border-radius: 8px; letter-spacing: 5px; color: #111827;">
-        ${otp}
+  const otpTemplate = `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; padding: 20px; }
+          .email-container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.3); }
+          .header { background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%); padding: 40px 30px; text-align: center; }
+          .logo { font-size: 32px; font-weight: 800; color: #ffffff; margin-bottom: 10px; }
+          .content { padding: 50px 40px; text-align: center; }
+          .greeting { font-size: 24px; color: #1e293b; margin-bottom: 20px; font-weight: 600; }
+          .otp-container { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 30px; margin: 30px 0; }
+          .otp-code { font-size: 36px; font-weight: 800; color: #1e40af; letter-spacing: 8px; font-family: monospace; }
+          .footer { background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 14px; color: #64748b; }
+      </style>
+  </head>
+  <body>
+      <div class="email-container">
+          <div class="header">
+              <div class="logo">TeamFlow</div>
+              <div style="color: #e2e8f0;">Your Gateway to Team Success</div>
+          </div>
+          <div class="content">
+              <h1 class="greeting">Verify Your Account</h1>
+              <p style="color: #64748b;">Use the OTP code below to complete your verification process.</p>
+              <div class="otp-container">
+                  <div style="font-size: 14px; color: #64748b; margin-bottom: 10px;">YOUR VERIFICATION CODE</div>
+                  <div class="otp-code">${otp}</div>
+                  <div style="color: #f59e0b; margin-top: 10px;">⏱️ Valid for 10 minutes</div>
+              </div>
+          </div>
+          <div class="footer">
+              <p>© 2026 TeamFlow. All rights reserved.</p>
+              <p>This is an automated email, please do not reply.</p>
+          </div>
       </div>
-      <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">This code will expire in 10 minutes.</p>
-    </div>
+  </body>
+  </html>
   `;
-  return await sendEmail(email, subject, text, html);
+  return await sendEmail(email, "TeamFlow - Your Verification Code", otpTemplate);
 };
 
 const sendTaskAssignment = async (email, taskTitle, projectName) => {
-  const subject = `New Task Assigned: ${taskTitle}`;
-  const text = `You have been assigned a new task: "${taskTitle}" in project "${projectName}".`;
-  const html = `
-    <div style="font-family: sans-serif; padding: 20px;">
-      <h2 style="color: #2563eb;">New Task Assigned</h2>
-      <p>Hello! You've been assigned a new task in <b>${projectName}</b>.</p>
-      <div style="padding: 15px; border-left: 4px solid #2563eb; background: #f9fafb;">
-        <p style="margin: 0; font-weight: bold;">${taskTitle}</p>
+  const taskTemplate = `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', sans-serif; background: #0f172a; padding: 20px; }
+          .email-container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; }
+          .header { background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%); padding: 30px; text-align: center; color: white; }
+          .content { padding: 40px; text-align: center; }
+          .task-card { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 25px; margin: 30px 0; text-align: left; }
+          .cta-button { display: inline-block; padding: 16px 32px; background: #1e40af; color: white; text-decoration: none; border-radius: 50px; font-weight: 600; margin-top: 20px; }
+          .footer { padding: 30px; text-align: center; font-size: 12px; color: #94a3b8; }
+      </style>
+  </head>
+  <body>
+      <div class="email-container">
+          <div class="header"><h1>TeamFlow</h1></div>
+          <div class="content">
+              <h2>New Task Assigned! 🎉</h2>
+              <p>You have a new responsibility in <b>${projectName}</b>.</p>
+              <div class="task-card">
+                  <h3 style="color: #166534;">${taskTitle}</h3>
+                  <p style="color: #15803d; font-size: 14px; margin-top: 10px;">Check your dashboard for details and deadlines.</p>
+              </div>
+              <a href="${process.env.FRONTEND_URL || '#'}" class="cta-button">VIEW DASHBOARD</a>
+          </div>
+          <div class="footer">© 2026 TeamFlow Platform</div>
       </div>
-      <p>Log in to TeamFlow to see more details.</p>
-    </div>
+  </body>
+  </html>
   `;
-  return await sendEmail(email, subject, text, html);
+  return await sendEmail(email, `New Task: ${taskTitle}`, taskTemplate);
 };
 
 module.exports = { sendEmail, sendOTP, sendTaskAssignment };
