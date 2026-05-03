@@ -15,7 +15,11 @@ const PORT = process.env.PORT || 5001;
 // middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? true : (process.env.FRONTEND_URL || 'http://localhost:5173'),
+  origin: [
+    'https://teamflow-frontend-8oeg.onrender.com',
+    'https://teamflow-mu-one.vercel.app',
+    'http://localhost:5173'
+  ],
   credentials: true // needed for cookies to work cross-origin
 }));
 app.use(express.json());
