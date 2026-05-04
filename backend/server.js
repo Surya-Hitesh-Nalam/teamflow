@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const authRoutes = require('./src/routes/auth.routes');
 const projectRoutes = require('./src/routes/project.routes');
 const taskRoutes = require('./src/routes/task.routes');
+const notificationRoutes = require('./src/routes/notification.routes');
 
 const app = express();
 app.set('trust proxy', 1); // Trust Render's proxy for rate limiting
@@ -28,6 +29,7 @@ app.use(cookieParser());
 // routes
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api', taskRoutes);
 
 // basic health check

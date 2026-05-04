@@ -32,79 +32,95 @@ export default function Dashboard() {
 
   const { summary, myTasks, recentActivity } = data;
 
+  const ongoingTasks = myTasks.filter(t => t.status !== 'DONE');
+  const completedTasks = myTasks.filter(t => t.status === 'DONE');
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-6">Dashboard</h1>
-
-        {/* summary cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <SummaryCard label="Total Projects" value={summary.totalProjects} color="bg-blue-50 text-blue-700" />
-          <SummaryCard label="My Tasks" value={summary.totalTasks} color="bg-slate-50 text-slate-700" />
-          <SummaryCard label="Completed" value={summary.completedTasks} color="bg-green-50 text-green-700" />
-          <SummaryCard label="Overdue" value={summary.overdueTasks} color="bg-red-50 text-red-700" />
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Workspace Dashboard</h1>
+          <Link to="/projects" className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm">
+            View All Projects
+          </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* my tasks */}
-          <div className="lg:col-span-2">
-            <h2 className="text-lg font-medium text-gray-800 mb-3">My Tasks</h2>
-            <div className="space-y-2">
-              {myTasks.length === 0 ? (
-                <p className="text-gray-400 text-sm">No tasks assigned to you</p>
-              ) : (
-                myTasks.map(task => (
-                  <Link
-                    to={`/tasks/${task.id}`}
-                    key={task.id}
-                    className={`block bg-white rounded-lg shadow-sm ring-1 ring-gray-200 p-4 hover:shadow-md transition-shadow ${
-                      task.isOverdue ? 'border-l-4 border-red-400' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{task.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {task.project?.name} · {task.status.replace('_', ' ')}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <PriorityBadge priority={task.priority} />
-                        {task.isOverdue && (
-                          <span className="text-xs text-red-500 font-medium">Overdue</span>
-                        )}
-                      </div>
-                    </div>
-                    {task.dueDate && (
-                      <p className="text-xs text-gray-400 mt-2">
-                        Due: {new Date(task.dueDate).toLocaleDateString()}
-                      </p>
-                    )}
-                  </Link>
-                ))
-              )}
+        {/* summary cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+          <SummaryCard label="Total Projects" value={summary.totalProjects} color="bg-indigo-50 text-indigo-700 border-indigo-100" />
+          <SummaryCard label="Ongoing Tasks" value={ongoingTasks.length} color="bg-amber-50 text-amber-700 border-amber-100" />
+          <SummaryCard label="Completed" value={summary.completedTasks} color="bg-emerald-50 text-emerald-700 border-emerald-100" />
+          <SummaryCard label="Overdue" value={summary.overdueTasks} color="bg-rose-50 text-rose-700 border-rose-100" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* my tasks section */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* Ongoing Tasks */}
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                Ongoing Tasks
+                <span className="bg-amber-100 text-amber-600 text-xs px-2 py-0.5 rounded-full">{ongoingTasks.length}</span>
+              </h2>
+              <div className="space-y-3">
+                {ongoingTasks.length === 0 ? (
+                  <div className="bg-white rounded-xl p-8 text-center border border-dashed border-gray-300">
+                    <p className="text-gray-400 text-sm">No active tasks assigned to you.</p>
+                  </div>
+                ) : (
+                  ongoingTasks.map(task => <TaskCard key={task.id} task={task} />)
+                )}
+              </div>
             </div>
+
+            {/* Completed Tasks */}
+            {completedTasks.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  Recently Completed
+                  <span className="bg-emerald-100 text-emerald-600 text-xs px-2 py-0.5 rounded-full">{completedTasks.length}</span>
+                </h2>
+                <div className="space-y-3 opacity-80">
+                  {completedTasks.slice(0, 5).map(task => <TaskCard key={task.id} task={task} isDone />)}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* recent activity */}
-          <div>
-            <h2 className="text-lg font-medium text-gray-800 mb-3">Recent Activity</h2>
-            <div className="bg-white rounded-lg shadow-sm ring-1 ring-gray-200 p-4">
-              {recentActivity.length === 0 ? (
-                <p className="text-gray-400 text-sm">No recent activity</p>
-              ) : (
-                <div className="space-y-3">
-                  {recentActivity.map(log => (
-                    <div key={log.id} className="text-sm">
-                      <p className="text-gray-700">
-                        <span className="font-medium">{log.user?.name}</span>{' '}
-                        {log.action}
-                      </p>
-                      <p className="text-xs text-gray-400">{log.timeAgo}</p>
-                    </div>
-                  ))}
+          {/* recent activity section */}
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                Activity Feed
+              </h2>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="p-1">
+                  {recentActivity.length === 0 ? (
+                    <p className="p-6 text-center text-gray-400 text-sm italic">No recent activity</p>
+                  ) : (
+                    recentActivity.map((log, idx) => (
+                      <div 
+                        key={log.id} 
+                        className={`p-4 hover:bg-gray-50 transition-colors ${idx !== recentActivity.length - 1 ? 'border-b border-gray-50' : ''}`}
+                      >
+                        <div className="flex gap-3">
+                          <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold shrink-0">
+                            {log.user?.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-700 leading-snug">
+                              <span className="font-bold text-gray-900">{log.user?.name}</span>{' '}
+                              {log.action}
+                            </p>
+                            <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-wider">{log.timeAgo}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
@@ -115,9 +131,51 @@ export default function Dashboard() {
 
 function SummaryCard({ label, value, color }) {
   return (
-    <div className={`rounded-lg p-4 ${color}`}>
-      <p className="text-sm font-medium opacity-80">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
+    <div className={`rounded-2xl p-6 border shadow-sm transition-transform hover:scale-[1.02] cursor-default ${color}`}>
+      <p className="text-xs font-bold uppercase tracking-wider opacity-70 mb-1">{label}</p>
+      <p className="text-3xl font-black">{value}</p>
     </div>
+  );
+}
+
+function TaskCard({ task, isDone }) {
+  return (
+    <Link
+      to={`/tasks/${task.id}`}
+      className={`block bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-all group ${
+        task.isOverdue && !isDone ? 'border-l-4 border-l-rose-500' : ''
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+             <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-tighter bg-indigo-50 px-1.5 py-0.5 rounded">
+               {task.project?.name}
+             </span>
+          </div>
+          <p className={`text-base font-bold transition-colors group-hover:text-indigo-600 ${isDone ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+            {task.title}
+          </p>
+          <div className="flex items-center gap-3 mt-3">
+            <PriorityBadge priority={task.priority} />
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              {task.status.replace('_', ' ')}
+            </span>
+          </div>
+        </div>
+        <div className="text-right">
+          {task.isOverdue && !isDone && (
+            <span className="text-[10px] bg-rose-100 text-rose-600 font-black px-2 py-1 rounded-full uppercase tracking-tighter">
+              Overdue
+            </span>
+          )}
+          {task.dueDate && (
+            <p className="text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-widest">
+              {new Date(task.dueDate).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+      </div>
+    </Link>
   );
 }

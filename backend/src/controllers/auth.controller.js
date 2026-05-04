@@ -1,7 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
-const { sendOTP } = require('../utils/emailService');
 
 // helper to generate 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -99,7 +98,6 @@ const login = async (req, res) => {
         where: { id: user.id },
         data: { otp, otpExpires }
       });
-      await sendOTP(email, otp);
       return res.status(403).json({ message: 'Account not verified. New OTP sent to your email.', unverified: true });
     }
 

@@ -9,11 +9,22 @@ export default function TaskDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [task, setTask] = useState(null);
+  const [projectMembers, setProjectMembers] = useState([]);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState(false);
+  
+  // Edit State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    title: '',
+    description: '',
+    assignedTo: '',
+    priority: '',
+    dueDate: ''
+  });
 
   useEffect(() => {
     fetchTaskAndComments();
@@ -26,8 +37,22 @@ export default function TaskDetail() {
         API.get(`/tasks/${id}`),
         API.get(`/tasks/${id}/comments`)
       ]);
-      setTask(taskRes.data.task);
+      const taskData = taskRes.data.task;
+      setTask(taskData);
       setComments(commentsRes.data.comments);
+      
+      // Prep edit data
+      setEditData({
+        title: taskData.title,
+        description: taskData.description || '',
+        assignedTo: taskData.assignedTo || '',
+        priority: taskData.priority,
+        dueDate: taskData.dueDate ? taskData.dueDate.split('T')[0] : ''
+      });
+
+      // Fetch project members for assignee dropdown
+      const projectRes = await API.get(`/projects/${taskData.projectId}`);
+      setProjectMembers(projectRes.data.project.members || []);
     } catch (err) {
       setError('Failed to load task details');
       console.error(err);
@@ -48,13 +73,17 @@ export default function TaskDetail() {
     }
   };
 
-  const handleUpdatePriority = async (newPriority) => {
+  const handleSaveEdit = async () => {
     try {
       setUpdating(true);
-      await API.patch(`/tasks/${id}`, { priority: newPriority });
-      setTask({ ...task, priority: newPriority });
+      const res = await API.patch(`/tasks/${id}`, {
+        ...editData,
+        assignedTo: editData.assignedTo ? parseInt(editData.assignedTo) : null
+      });
+      setTask(res.data.task);
+      setIsEditing(false);
     } catch (err) {
-      alert('Failed to update priority');
+      alert('Failed to save changes');
     } finally {
       setUpdating(false);
     }
@@ -95,7 +124,7 @@ export default function TaskDetail() {
         <span>/</span>
         <Link to={`/projects/${task.projectId}`} className="hover:text-blue-600">{task.project?.name}</Link>
         <span>/</span>
-        <span className="font-medium text-gray-900">Task Details</span>
+        <span className="font-medium text-gray-900 text-sm uppercase tracking-wider">Task Details</span>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -110,78 +139,104 @@ export default function TaskDetail() {
                 {task.status.replace('_', ' ')}
               </span>
               <PriorityBadge priority={task.priority} />
-              {task.isOverdue && (
-                <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">OVERDUE</span>
+            </div>
+            <div className="flex gap-4">
+              {!isEditing ? (
+                <>
+                  <button onClick={() => setIsEditing(true)} className="text-blue-600 hover:text-blue-700 text-sm font-bold uppercase tracking-wider">Edit Task</button>
+                  {user.role === 'ADMIN' && (
+                    <button onClick={handleDeleteTask} className="text-red-500 hover:text-red-700 text-sm font-bold uppercase tracking-wider">Delete</button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <button onClick={handleSaveEdit} disabled={updating} className="text-green-600 hover:text-green-700 text-sm font-bold uppercase tracking-wider">Save Changes</button>
+                  <button onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-gray-700 text-sm font-bold uppercase tracking-wider">Cancel</button>
+                </>
               )}
             </div>
-            {user.role === 'ADMIN' && (
-              <button 
-                onClick={handleDeleteTask}
-                className="text-red-500 hover:text-red-700 text-sm font-medium"
-              >
-                Delete Task
-              </button>
-            )}
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">{task.title}</h1>
-          <p className="text-gray-600 text-lg leading-relaxed">{task.description || 'No description provided.'}</p>
+
+          {isEditing ? (
+            <div className="space-y-4">
+              <input 
+                className="text-3xl font-bold text-gray-900 w-full border-b-2 border-blue-500 outline-none pb-2"
+                value={editData.title}
+                onChange={e => setEditData({...editData, title: e.target.value})}
+              />
+              <textarea 
+                className="text-gray-600 text-lg leading-relaxed w-full border border-gray-200 rounded-xl p-4 outline-none h-32"
+                value={editData.description}
+                onChange={e => setEditData({...editData, description: e.target.value})}
+              />
+            </div>
+          ) : (
+            <>
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">{task.title}</h1>
+              <p className="text-gray-600 text-lg leading-relaxed">{task.description || 'No description provided.'}</p>
+            </>
+          )}
         </div>
 
         {/* Info Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 bg-gray-50/50">
           <div className="p-8 border-r border-gray-100">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Details</h3>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Properties</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Assignee</span>
-                <span className="font-medium text-gray-900 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">
-                    {task.assignee?.name.charAt(0) || '?'}
-                  </div>
-                  {task.assignee?.name || 'Unassigned'}
-                </span>
+                <span className="text-gray-600 text-sm font-medium">Assignee</span>
+                {isEditing ? (
+                  <select 
+                    className="text-sm border border-gray-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500"
+                    value={editData.assignedTo}
+                    onChange={e => setEditData({...editData, assignedTo: e.target.value})}
+                  >
+                    <option value="">Unassigned</option>
+                    {projectMembers.map(m => (
+                      <option key={m.userId} value={m.userId}>{m.user.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">
+                      {task.assignee?.name.charAt(0) || '?'}
+                    </div>
+                    {task.assignee?.name || 'Unassigned'}
+                  </span>
+                )}
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Created By</span>
-                <span className="text-gray-900">{task.creator?.name}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Due Date</span>
-                <span className={`font-medium ${task.isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
-                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
-                </span>
+                <span className="text-gray-600 text-sm font-medium">Due Date</span>
+                {isEditing ? (
+                  <input 
+                    type="date"
+                    className="text-sm border border-gray-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500"
+                    value={editData.dueDate}
+                    onChange={e => setEditData({...editData, dueDate: e.target.value})}
+                  />
+                ) : (
+                  <span className={`font-bold text-sm ${task.isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
+                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
           <div className="p-8">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Actions</h3>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Quick Status</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-2">Update Status</label>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 tracking-wider">Status</label>
                 <select 
-                  className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"
                   value={task.status}
                   onChange={(e) => handleUpdateStatus(e.target.value)}
-                  disabled={updating}
+                  disabled={updating || isEditing}
                 >
                   <option value="TODO">To Do</option>
                   <option value="IN_PROGRESS">In Progress</option>
                   <option value="DONE">Done</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-2">Update Priority</label>
-                <select 
-                  className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"
-                  value={task.priority}
-                  onChange={(e) => handleUpdatePriority(e.target.value)}
-                  disabled={updating}
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="URGENT">Urgent</option>
                 </select>
               </div>
             </div>
@@ -191,13 +246,13 @@ export default function TaskDetail() {
         {/* Comments Section */}
         <div className="p-8 border-t border-gray-100">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            💬 Comments
+            Comments
             <span className="text-gray-400 font-normal text-sm">({comments.length})</span>
           </h2>
 
           <form onSubmit={handleAddComment} className="mb-8">
             <textarea 
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none h-24 mb-3"
+              className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none h-24 mb-3"
               placeholder="Write a comment..."
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
@@ -205,7 +260,7 @@ export default function TaskDetail() {
             <div className="flex justify-end">
               <button 
                 type="submit"
-                className="bg-gray-900 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-black transition shadow-sm"
+                className="bg-gray-900 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-black transition shadow-sm"
               >
                 Post Comment
               </button>
@@ -225,17 +280,12 @@ export default function TaskDetail() {
                     <p className="font-bold text-sm text-gray-900 mb-1">{comment.user.name}</p>
                     <p className="text-gray-700 text-sm leading-relaxed">{comment.content}</p>
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1 ml-2 font-medium uppercase tracking-wider">
+                  <p className="text-[10px] text-gray-400 mt-2 ml-2 font-bold uppercase tracking-wider">
                     {new Date(comment.createdAt).toLocaleString()}
                   </p>
                 </div>
               </div>
             ))}
-            {comments.length === 0 && (
-              <div className="text-center py-12 text-gray-400 italic">
-                No comments yet. Be the first to chime in!
-              </div>
-            )}
           </div>
         </div>
       </div>

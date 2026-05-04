@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationCenter from './NotificationCenter';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -22,25 +23,27 @@ export default function Navbar() {
             TeamFlow
           </Link>
           <div className="flex items-center gap-4 text-sm">
-            <Link to="/dashboard" className="text-gray-600 hover:text-gray-900">
+            <Link to="/dashboard" className="text-gray-600 hover:text-gray-900 font-medium">
               Dashboard
             </Link>
-            <Link to="/projects" className="text-gray-600 hover:text-gray-900">
+            <Link to="/projects" className="text-gray-600 hover:text-gray-900 font-medium">
               Projects
             </Link>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">{user?.name}</span>
+          {user && <NotificationCenter />}
+          <div className="h-6 w-px bg-gray-200 mx-2" />
+          <span className="text-sm font-semibold text-gray-700">{user?.name}</span>
           {user?.role === 'ADMIN' && (
-            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-tight">
               Admin
             </span>
           )}
           <button
             onClick={handleLogout}
-            className="text-sm text-gray-500 hover:text-gray-700 ml-2"
+            className="text-sm text-gray-500 hover:text-red-600 ml-4 font-medium transition-colors"
           >
             Logout
           </button>
