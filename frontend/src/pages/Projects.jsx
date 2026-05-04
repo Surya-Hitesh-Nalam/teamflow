@@ -111,7 +111,22 @@ export default function Projects() {
                   <span>{project.members?.length || 0} members</span>
                   <span>{project._count?.tasks || 0} tasks</span>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">
+                
+                {/* Progress Bar */}
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Progress</span>
+                    <span>{Math.round((project._count?.tasks > 0 ? (project.tasks?.filter(t => t.status === 'DONE').length / project._count.tasks) * 100 : 0))}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-slate-800 transition-all duration-500" 
+                      style={{ width: `${project._count?.tasks > 0 ? (project.tasks?.filter(t => t.status === 'DONE').length / project._count.tasks) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-gray-400 mt-3 uppercase tracking-wider">
                   Owner: {project.owner?.name}
                 </p>
               </Link>

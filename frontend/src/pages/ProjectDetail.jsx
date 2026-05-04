@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import PriorityBadge from '../components/PriorityBadge';
+import confetti from 'canvas-confetti';
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -67,6 +68,16 @@ export default function ProjectDetail() {
     try {
       await API.patch(`/tasks/${taskId}`, { status: newStatus });
       setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+      
+      if (newStatus === 'DONE') {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#1e40af', '#3b82f6', '#60a5fa', '#ffffff']
+        });
+      }
+
       fetchProjectData(); // Refresh activity log
     } catch (err) {
       alert('Failed to update task');

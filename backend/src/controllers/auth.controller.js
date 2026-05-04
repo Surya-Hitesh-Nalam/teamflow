@@ -25,16 +25,14 @@ const signup = async (req, res) => {
         email, 
         passwordHash, 
         role: role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
-        otp,
-        otpExpires,
-        isVerified: false
+        isVerified: true // INSTANT VERIFICATION
       }
     });
 
-    await sendOTP(email, otp);
+    // Removed email service call for demo reliability
 
     res.status(201).json({
-      message: 'Account created. Please verify your email with the OTP sent.',
+      message: 'Account created successfully!',
       userId: user.id
     });
   } catch (err) {

@@ -29,8 +29,8 @@ you can track projects, tasks, and team progress in real-time.
   see who created a task or moved it to "Done" and when.
 
 * Secure Login: 
-  We use professional OTP (One-Time Password) verification 
-  to keep your data safe and ensure only team members can enter.
+  We use professional account security to keep your data 
+  safe and ensure only team members can enter.
 
 -----------------------------------------------------------
 2. TECHNOLOGY STACK
