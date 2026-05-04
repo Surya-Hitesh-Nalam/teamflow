@@ -10,7 +10,7 @@ const taskRoutes = require('./src/routes/task.routes');
 const notificationRoutes = require('./src/routes/notification.routes');
 
 const app = express();
-app.set('trust proxy', 1); // Trust Render's proxy for rate limiting
+app.set('trust proxy', 1); 
 const PORT = process.env.PORT || 5001;
 
 // middleware
@@ -21,7 +21,7 @@ app.use(cors({
     'https://teamflow-mu-one.vercel.app',
     'http://localhost:5173'
   ],
-  credentials: true // needed for cookies to work cross-origin
+  credentials: true 
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -32,7 +32,6 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api', taskRoutes);
 
-// basic health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

@@ -30,7 +30,6 @@ const addComment = async (req, res) => {
       return res.status(400).json({ message: 'Comment cannot be empty' });
     }
 
-    // need the task to know which project it belongs to (for activity log)
     const task = await prisma.task.findUnique({ where: { id: taskId } });
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });

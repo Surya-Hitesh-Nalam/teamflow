@@ -11,7 +11,6 @@ const createProject = async (req, res) => {
         name,
         description: description || null,
         ownerId: userId,
-        // automatically add owner as a member too
         members: {
           create: { userId }
         }
@@ -31,7 +30,6 @@ const getProjects = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // get all projects where the user is either the owner or a member
     const projects = await prisma.project.findMany({
       where: {
         OR: [

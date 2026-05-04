@@ -5,17 +5,14 @@ const getDashboard = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // get all projects this user is part of
     const memberships = await prisma.projectMember.findMany({
       where: { userId },
       select: { projectId: true }
     });
     const projectIds = memberships.map(m => m.projectId);
 
-    // count total projects
     const totalProjects = projectIds.length;
 
-    // get all tasks assigned to this user
     const myTasks = await prisma.task.findMany({
       where: { assignedTo: userId },
       include: {
@@ -31,13 +28,11 @@ const getDashboard = async (req, res) => {
       t.dueDate && new Date(t.dueDate) < now && t.status !== 'DONE'
     );
 
-    // add overdue flag to all tasks
     const tasksWithOverdue = myTasks.map(task => ({
       ...task,
       isOverdue: task.dueDate && new Date(task.dueDate) < now && task.status !== 'DONE'
     }));
 
-    // recent activity across all user's projects
     const recentActivity = await prisma.activityLog.findMany({
       where: { projectId: { in: projectIds } },
       include: {
@@ -48,7 +43,6 @@ const getDashboard = async (req, res) => {
       take: 10
     });
 
-    // format activity with relative timestamps
     const formattedActivity = recentActivity.map(log => ({
       ...log,
       timeAgo: timeAgo(log.createdAt)

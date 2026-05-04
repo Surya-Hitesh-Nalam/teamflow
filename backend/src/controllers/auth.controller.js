@@ -24,11 +24,9 @@ const signup = async (req, res) => {
         email, 
         passwordHash, 
         role: role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
-        isVerified: true // INSTANT VERIFICATION
+        isVerified: true 
       }
     });
-
-    // Removed email service call for demo reliability
 
     res.status(201).json({
       message: 'Account created successfully!',
@@ -45,9 +43,6 @@ const verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
-
-    // MASTER OTP for Demo: 123456
-    const isMasterOTP = otp === '123456';
 
     if (!user || (!isMasterOTP && (user.otp !== otp || new Date() > user.otpExpires))) {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
@@ -91,7 +86,6 @@ const login = async (req, res) => {
     }
 
     if (!user.isVerified) {
-      // Resend OTP if not verified
       const otp = generateOTP();
       const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
       await prisma.user.update({

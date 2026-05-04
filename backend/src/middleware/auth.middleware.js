@@ -11,7 +11,6 @@ const authenticate = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // check if this token was blacklisted (user logged out but token hasn't expired yet)
     const blacklisted = await prisma.blacklistedToken.findUnique({
       where: { token }
     });
